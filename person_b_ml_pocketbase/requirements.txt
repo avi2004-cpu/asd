@@ -1,0 +1,9 @@
+requests
+opencv-python
+mediapipe
+fer
+tensorflow
+scikit-learn
+joblib
+numpy
+matplotlib
