@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Check, Heart, ShieldCheck } from "lucide-react";
 import faceImage from "@/assets/friendly-face.jpg";
 import { Button } from "@/components/ui/button";
-import { pocketBaseConfigured, uploadSession, type InteractionEvent } from "@/lib/pocketbase";
+import { isParentAuthenticated, pocketBaseConfigured, signOut, uploadSession, type InteractionEvent } from "@/lib/pocketbase";
 
 type Screen = "home" | "attention" | "taps" | "uploading" | "done";
 
@@ -138,6 +138,10 @@ function ChildApp() {
 
   const begin = async () => {
     if (!childId.trim()) return;
+    if (!isParentAuthenticated()) {
+      setUploadError("A parent or guardian must sign in before starting a session.");
+      return;
+    }
     const newId = crypto.randomUUID();
     setSessionId(newId);
     sessionTimestamp.current = new Date().toISOString();
@@ -191,18 +195,29 @@ function ChildApp() {
     setCameraConsent(false);
   };
 
+  const parentSignOut = () => {
+    signOut();
+    setChildId("");
+  };
+
   return (
     <div className="child-shell app-shell">
       <div className="camera-preview-slot" id={cameraElementId} aria-hidden="true" />
       <header className="child-header">
         <div className="brand-mark"><span className="brand-dot" /> Little Moments</div>
-        <Link to="/dashboard" aria-label="Clinician dashboard" className="muted-line">For clinicians</Link>
+        <nav className="child-header-links">
+          {isParentAuthenticated()
+            ? <button type="button" className="muted-line child-signout" onClick={parentSignOut}>Parent sign out</button>
+            : <Link to="/parent/login" className="muted-line">Parent sign in</Link>}
+          <Link to="/doctor/login" aria-label="Clinician sign in" className="muted-line">For clinicians</Link>
+        </nav>
       </header>
       <main className="child-main">
         {screen === "home" && <>
           <div className="child-art"><img src={faceImage} alt="Friendly illustrated face" width={816} height={816} /></div>
           <h1 className="child-title">Ready to play?</h1>
           <p className="child-copy">A grown-up can help you get started.</p>
+          {!isParentAuthenticated() && <div className="notice alert">A parent or guardian must <Link className="text-link" to="/parent/login">sign in</Link> before starting a session.</div>}
           <label className="camera-note" htmlFor="child-id">Child ID</label><br />
           <input id="child-id" className="child-field" value={childId} onChange={(event) => setChildId(event.target.value)} placeholder="Enter child ID" autoComplete="off" />
           <label className="consent-row">
@@ -210,7 +225,7 @@ function ChildApp() {
             <span><ShieldCheck size={17} aria-hidden="true" /> I am a parent or guardian and agree to sample and upload camera frames during this play activity. Camera is optional.</span>
           </label>
           {!pocketBaseConfigured() && <div className="notice alert">Session saving needs a PocketBase URL. The play activity is still available.</div>}
-          <Button className="primary-touch" onClick={() => void begin()} disabled={!childId.trim()}>Start <Heart size={20} fill="currentColor" /></Button>
+          <Button className="primary-touch" onClick={() => void begin()} disabled={!childId.trim() || !isParentAuthenticated()}>Start <Heart size={20} fill="currentColor" /></Button>
         </>}
         {screen === "attention" && <>
           <p className="camera-note">Let’s look together</p>

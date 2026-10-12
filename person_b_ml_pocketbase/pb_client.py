@@ -7,6 +7,7 @@ beyond pointing this at the right URL.
 
 import json
 import os
+import time
 
 import requests
 
@@ -14,22 +15,73 @@ import requests
 # browser on the same laptop), set this to your ngrok URL instead, e.g.
 #   POCKETBASE_URL=https://a1b2c3.ngrok-free.app python listener.py
 PB_URL = os.environ.get("POCKETBASE_URL", "http://127.0.0.1:8090")
+PB_WORKER_EMAIL = os.environ.get("POCKETBASE_WORKER_EMAIL", "")
+PB_WORKER_PASSWORD = os.environ.get("POCKETBASE_WORKER_PASSWORD", "")
+_auth_token = ""
+_auth_expires_at = 0.0
+
+
+def _get_auth_token(force_refresh: bool = False) -> str:
+    """Authenticate the scoring worker as a restricted PocketBase user."""
+    global _auth_token, _auth_expires_at
+
+    if _auth_token and not force_refresh and time.monotonic() < _auth_expires_at:
+        return _auth_token
+    if not PB_WORKER_EMAIL or not PB_WORKER_PASSWORD:
+        raise RuntimeError(
+            "Set POCKETBASE_WORKER_EMAIL and POCKETBASE_WORKER_PASSWORD for the scoring worker."
+        )
+
+    response = requests.post(
+        f"{PB_URL}/api/collections/users/auth-with-password",
+        json={"identity": PB_WORKER_EMAIL, "password": PB_WORKER_PASSWORD},
+        timeout=15,
+    )
+    response.raise_for_status()
+    _auth_token = response.json()["token"]
+    _auth_expires_at = time.monotonic() + 600
+    return _auth_token
+
+
+def _request(method: str, url: str, **kwargs):
+    """Send an authenticated API call and refresh once if the token expired."""
+    headers = dict(kwargs.pop("headers", {}))
+    headers["Authorization"] = _get_auth_token()
+    response = requests.request(method, url, headers=headers, **kwargs)
+    if response.status_code == 401:
+        for file_value in (kwargs.get("files") or {}).values():
+            file_stream = file_value[1] if isinstance(file_value, tuple) else file_value
+            if hasattr(file_stream, "seek"):
+                file_stream.seek(0)
+        headers["Authorization"] = _get_auth_token(force_refresh=True)
+        response = requests.request(method, url, headers=headers, **kwargs)
+    return response
 
 
 def get_uploaded_sessions():
     """Returns all session records with status == 'uploaded'."""
-    resp = requests.get(
+    resp = _request(
+        "GET",
         f"{PB_URL}/api/collections/sessions/records",
         params={"filter": "status='uploaded'", "perPage": 200},
+        timeout=30,
     )
     resp.raise_for_status()
-    return resp.json()["items"]
+    sessions = resp.json()["items"]
+    for session in sessions:
+        session["framesUploaded"] = [
+            f"{PB_URL}/api/files/sessions/{session['id']}/{filename}"
+            for filename in session.get("framesUploaded", [])
+        ]
+    return sessions
 
 
 def result_exists(session_id: str) -> bool:
-    resp = requests.get(
+    resp = _request(
+        "GET",
         f"{PB_URL}/api/collections/results/records",
         params={"filter": f"sessionId='{session_id}'", "perPage": 1},
+        timeout=30,
     )
     resp.raise_for_status()
     return resp.json()["totalItems"] > 0
@@ -43,7 +95,7 @@ def download_frame(url: str) -> bytes:
     """
     if not url.startswith("http"):
         url = f"{PB_URL}{url}"
-    resp = requests.get(url)
+    resp = _request("GET", url, timeout=30)
     resp.raise_for_status()
     return resp.content
 
@@ -69,8 +121,12 @@ def create_result_record(fields: dict, heatmap_path: str | None = None):
         files = {"heatmapImage": file_handle}
 
     try:
-        resp = requests.post(
-            f"{PB_URL}/api/collections/results/records", data=data, files=files
+        resp = _request(
+            "POST",
+            f"{PB_URL}/api/collections/results/records",
+            data=data,
+            files=files,
+            timeout=60,
         )
         resp.raise_for_status()
         record = resp.json()
@@ -82,9 +138,11 @@ def create_result_record(fields: dict, heatmap_path: str | None = None):
         filename = record.get("heatmapImage")
         if filename:
             heatmap_url = f"{PB_URL}/api/files/results/{record['id']}/{filename}"
-            patch = requests.patch(
+            patch = _request(
+                "PATCH",
                 f"{PB_URL}/api/collections/results/records/{record['id']}",
                 data={"gazeHeatmapUrl": heatmap_url},
+                timeout=30,
             )
             patch.raise_for_status()
             record = patch.json()

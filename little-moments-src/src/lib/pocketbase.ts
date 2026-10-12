@@ -33,10 +33,79 @@ export interface ScreeningResult {
 }
 
 const pocketBaseUrl = import.meta.env.VITE_POCKETBASE_URL || "http://127.0.0.1:8090";
-const pb = new PocketBase(pocketBaseUrl);
+export const pb = new PocketBase(pocketBaseUrl);
+
+export interface DoctorDirectoryEntry {
+  id: string;
+  child: string;
+  displayName: string;
+  riskFlag: "pending" | "low" | "moderate" | "elevated";
+}
+
+export interface DoctorChildDetails {
+  child: { id: string; displayName: string; riskFlag: DoctorDirectoryEntry["riskFlag"] };
+  sessions: (ScreeningSession & { id: string })[];
+  results: (ScreeningResult & { id: string; session?: string })[];
+  conclusions: {
+    id: string;
+    child: string;
+    session?: string;
+    summary: string;
+    createdAt: string;
+  }[];
+}
+
+interface AuthenticatedUser {
+  id: string;
+  role: "parent" | "doctor";
+}
 
 export function pocketBaseConfigured() {
   return Boolean(pocketBaseUrl);
+}
+
+export function isDoctorAuthenticated() {
+  return pb.authStore.isValid && pb.authStore.record?.role === "doctor";
+}
+
+export function isParentAuthenticated() {
+  return pb.authStore.isValid && pb.authStore.record?.role === "parent";
+}
+
+export async function signInDoctor(email: string, password: string) {
+  const response = await pb.collection("users").authWithPassword<AuthenticatedUser>(email, password);
+  if (response.record.role !== "doctor") {
+    pb.authStore.clear();
+    throw new Error("This account does not have doctor access.");
+  }
+  return response.record;
+}
+
+export async function signInParent(email: string, password: string) {
+  const response = await pb.collection("users").authWithPassword<AuthenticatedUser>(email, password);
+  if (response.record.role !== "parent") {
+    pb.authStore.clear();
+    throw new Error("This account does not have parent access.");
+  }
+  return response.record;
+}
+
+export function signOut() {
+  pb.authStore.clear();
+}
+
+export async function getDoctorDirectory() {
+  return pb.collection("doctor_directory").getFullList<DoctorDirectoryEntry>({
+    sort: "displayName",
+    fields: "id,child,displayName,riskFlag",
+  });
+}
+
+export async function getDoctorChildDetails(childId: string) {
+  return pb.send<DoctorChildDetails>(
+    `/api/doctor/children/${encodeURIComponent(childId)}/details`,
+    { method: "GET" },
+  );
 }
 
 type Unsubscribe = () => void;
@@ -107,6 +176,7 @@ export async function uploadSession(
   const form = new FormData();
   form.append("sessionId", session.sessionId);
   form.append("childId", session.childId);
+  form.append("child", session.childId);
   form.append("timestamp", session.timestamp);
   form.append("gameModule", session.gameModule);
   form.append("interactionEvents", JSON.stringify(session.interactionEvents));

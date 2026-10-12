@@ -34,10 +34,19 @@ Admin UI: http://127.0.0.1:8090/_/
 - `scoredAt` (text)
 - `aiInsight` (text)
 
-**Important — API rules:** for this prototype, open both collections'
-Create/Update rules to "everyone" (leave them blank/public) in the admin UI,
-so the Python pipeline can write without needing an admin auth token. Lock
-this down properly before any real deployment.
+The repository migrations allow only the restricted `scoring-worker` role to
+read sessions and create/update results. Do not open either collection to the
+public. Configure these environment variables before running `listener.py`:
+
+```
+POCKETBASE_URL=https://your-shared-host.example
+POCKETBASE_WORKER_EMAIL=worker@example.invalid
+POCKETBASE_WORKER_PASSWORD=<secret from the deployment environment>
+```
+
+Create a dedicated `users` auth record with the `scoring-worker` role and keep its credentials outside
+the source tree. Both the frontend and this worker must point at the same
+PocketBase origin.
 
 ## 3. Install and run
 

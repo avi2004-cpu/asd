@@ -10,29 +10,32 @@ Download the archive for your operating system from [pocketbase.io/docs](https:/
 
 On Windows, run `pocketbase.exe serve`. Open `http://127.0.0.1:8090/_/` to create the first admin account and use the admin UI.
 
-## Create collections
+## Apply the backend schema
 
-Create two **Base** collections named `sessions` and `results`. The app reads session and result lists publicly and writes session records, so configure the API rules to allow the intended access for your local testing setup.
+The repository contains PocketBase migrations and server hooks in `../pb_migrations` and `../pb_hooks`. Start PocketBase with the repository root as its working directory so it discovers these directories, and apply the migrations on first startup. The migration extends the existing `sessions` and `results` collections and creates `users`, `children`, `conclusions`, `doctor_directory`, and `videos`. Do not make session or result rules public.
 
-For `sessions`, add these fields:
+The app expects these existing pipeline fields:
 
-- `sessionId` (text), `childId` (text), `timestamp` (text), `gameModule` (text)
-- `framesUploaded` (file, multiple files allowed)
-- `interactionEvents` (JSON)
-- `status` (text)
+- `sessions`: `sessionId`, `childId`, `timestamp`, `gameModule`, `framesUploaded`, `interactionEvents`, `status`
+- `results`: `sessionId`, `riskScore`, `features`, `gazeHeatmapUrl`, `modelVersion`, `scoredAt`, `aiInsight`, and optional `heatmapImage`
 
-The app writes the session data as `{ sessionId, childId, timestamp, gameModule, framesUploaded, interactionEvents, status: "uploaded" }`. `framesUploaded` is the PocketBase array of uploaded file names/paths.
+The migration adds the relations and ownership rules. Parent API access is limited to children assigned to their account. Doctors can list only `doctor_directory` fields (`displayName`, `riskFlag`); the custom authenticated details endpoint returns session history only after a child is opened. Server hooks enforce two new sessions per child per UTC day, maintain the completion count/streak only after a result is created, and synchronize the doctor's directory.
 
-For `results`, add the fields consumed by the Python scoring pipeline:
+Accounts are intentionally not self-registering. Create `users` auth records in the PocketBase admin UI, set `role` to `parent`, `doctor`, or `scoring-worker`, and create/link child records using the parent's record ID. Use the PocketBase child record ID as the child ID in the activity form. Create doctor accounts only for authorized clinicians, and create one restricted `scoring-worker` account for the Person B pipeline.
 
-- `sessionId` (text), `riskScore` (number)
-- `features` (JSON object containing `expressionScores`, `gazeProxyMetrics`, and `interactionMetrics`)
-- `gazeHeatmapUrl` (text), `modelVersion` (text), `scoredAt` (text), `aiInsight` (text)
-
-The app only reads this collection. Make sure your pipeline writes the same result shape.
+The video collection is seeded with a short sample clip (`title`, `url`, `durationSeconds`, and `learningObjective`). Replace the sample URL with approved hosted content before production use.
 
 ## Connect the app
 
 Set `VITE_POCKETBASE_URL` in `.env.local` to the PocketBase origin, then restart the dev server. The default is `http://127.0.0.1:8090`.
 
-For phone testing, expose the PocketBase port with ngrok, for example `ngrok http 8090`, then set `VITE_POCKETBASE_URL` to the HTTPS forwarding URL ngrok provides (for example `https://example.ngrok-free.app`). The phone must be able to reach that URL; if app and PocketBase are on the same Wi-Fi, you can instead use the computer's LAN IP and port 8090. Restart the app after changing the URL.
+The Person B scoring worker authenticates using its restricted `scoring-worker` account; never use an empty/public session or results API rule:
+
+```sh
+POCKETBASE_URL=https://your-shared-host.example \
+POCKETBASE_WORKER_EMAIL=worker@example.invalid \
+POCKETBASE_WORKER_PASSWORD=replace-with-a-secret \
+python listener.py
+```
+
+For local LAN integration, run PocketBase bound to `0.0.0.0:8090` and configure `VITE_POCKETBASE_URL` and `POCKETBASE_URL` to the host's LAN address. For shared remote testing, deploy PocketBase on a server with HTTPS and persistent storage, then point both applications and the worker at that same origin. A deployment target and credentials were not provided, so this repository does not provision a public host. Do not expose the admin UI or use a public tunnel for production data.
