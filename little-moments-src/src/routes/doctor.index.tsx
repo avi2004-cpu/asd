@@ -4,7 +4,7 @@ import { LogOut, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   getDoctorDirectory,
-  isDoctorAuthenticated,
+  restoreDoctorSession,
   signOut,
   type DoctorDirectoryEntry,
 } from "@/lib/pocketbase";
@@ -21,12 +21,15 @@ function DoctorDashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!isDoctorAuthenticated()) {
-      void navigate({ to: "/doctor/login" });
-      return;
-    }
     let active = true;
-    void getDoctorDirectory()
+    void restoreDoctorSession()
+      .then(async (authenticated) => {
+        if (!authenticated) {
+          await navigate({ to: "/doctor/login" });
+          return [];
+        }
+        return getDoctorDirectory();
+      })
       .then((items) => {
         if (active) setChildren(items);
       })

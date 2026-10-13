@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { signInDoctor, isDoctorAuthenticated } from "@/lib/pocketbase";
+import { signInDoctor, restoreDoctorSession } from "@/lib/pocketbase";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/doctor/login")({
@@ -16,7 +16,15 @@ function DoctorLogin() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isDoctorAuthenticated()) void navigate({ to: "/doctor" });
+    void restoreDoctorSession()
+      .then((authenticated) => {
+        if (authenticated) void navigate({ to: "/doctor" });
+      })
+      .catch((reason: unknown) => {
+        setError(
+          reason instanceof Error ? reason.message : "Your clinician account could not be checked.",
+        );
+      });
   }, [navigate]);
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {

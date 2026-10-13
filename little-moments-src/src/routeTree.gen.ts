@@ -16,6 +16,7 @@ import { Route as DoctorRouteImport } from './routes/doctor'
 import { Route as DoctorIndexRouteImport } from './routes/doctor.index'
 import { Route as DoctorLoginRouteImport } from './routes/doctor.login'
 import { Route as ParentLoginRouteImport } from './routes/parent.login'
+import { Route as ParentSignupRouteImport } from './routes/parent.signup'
 import { Route as DashboardSessionIdRouteImport } from './routes/dashboard.session.$id'
 import { Route as DashboardTrendsChildIdRouteImport } from './routes/dashboard.trends.$childId'
 import { Route as DoctorChildrenIdRouteImport } from './routes/doctor.children.$id'
@@ -55,6 +56,11 @@ const ParentLoginRoute = ParentLoginRouteImport.update({
   path: '/parent/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ParentSignupRoute = ParentSignupRouteImport.update({
+  id: '/parent/signup',
+  path: '/parent/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardSessionIdRoute = DashboardSessionIdRouteImport.update({
   id: '/session/$id',
   path: '/session/$id',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/doctor': typeof DoctorRouteWithChildren
   '/doctor/login': typeof DoctorLoginRoute
   '/parent/login': typeof ParentLoginRoute
+  '/parent/signup': typeof ParentSignupRoute
   '/doctor/': typeof DoctorIndexRoute
   '/dashboard/session/$id': typeof DashboardSessionIdRoute
   '/dashboard/trends/$childId': typeof DashboardTrendsChildIdRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRouteWithChildren
   '/doctor/login': typeof DoctorLoginRoute
   '/parent/login': typeof ParentLoginRoute
+  '/parent/signup': typeof ParentSignupRoute
   '/doctor': typeof DoctorIndexRoute
   '/dashboard/session/$id': typeof DashboardSessionIdRoute
   '/dashboard/trends/$childId': typeof DashboardTrendsChildIdRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/doctor': typeof DoctorRouteWithChildren
   '/doctor/login': typeof DoctorLoginRoute
   '/parent/login': typeof ParentLoginRoute
+  '/parent/signup': typeof ParentSignupRoute
   '/doctor/': typeof DoctorIndexRoute
   '/dashboard/session/$id': typeof DashboardSessionIdRoute
   '/dashboard/trends/$childId': typeof DashboardTrendsChildIdRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/doctor'
     | '/doctor/login'
     | '/parent/login'
+    | '/parent/signup'
     | '/doctor/'
     | '/dashboard/session/$id'
     | '/dashboard/trends/$childId'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/doctor/login'
     | '/parent/login'
+    | '/parent/signup'
     | '/doctor'
     | '/dashboard/session/$id'
     | '/dashboard/trends/$childId'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/doctor'
     | '/doctor/login'
     | '/parent/login'
+    | '/parent/signup'
     | '/doctor/'
     | '/dashboard/session/$id'
     | '/dashboard/trends/$childId'
@@ -151,6 +163,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   DoctorRoute: typeof DoctorRouteWithChildren
   ParentLoginRoute: typeof ParentLoginRoute
+  ParentSignupRoute: typeof ParentSignupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -202,6 +215,13 @@ declare module '@tanstack/react-router' {
       path: '/parent/login'
       fullPath: '/parent/login'
       preLoaderRoute: typeof ParentLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/parent/signup': {
+      id: '/parent/signup'
+      path: '/parent/signup'
+      fullPath: '/parent/signup'
+      preLoaderRoute: typeof ParentSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/session/$id': {
@@ -263,6 +283,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   DoctorRoute: DoctorRouteWithChildren,
   ParentLoginRoute: ParentLoginRoute,
+  ParentSignupRoute: ParentSignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

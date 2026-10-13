@@ -70,42 +70,62 @@ const baseCollection = (name, id, fields, rules = {}) => new Collection({
   deleteRule: rules.deleteRule ?? null,
 });
 
+const addField = (collection, field) => collection.fields.add(new Field(field));
+
 migrate((app) => {
-  const users = new Collection({
-    type: "auth",
-    id: "pbc_1000000001",
-    name: "users",
-    fields: [
-      {
-        type: "select",
-        id: "select100000001",
-        name: "role",
-        required: true,
-        presentable: false,
-        system: false,
-        maxSelect: 1,
-        values: ["parent", "doctor", "scoring-worker"],
-        hidden: false,
-        help: "",
-      },
-    ],
-    indexes: [],
+  const users = app.findCollectionByNameOrId("users");
+  users.fields.add(new Field({
+    type: "select",
+    id: "select100000001",
+    name: "role",
+    required: false,
+    presentable: false,
     system: false,
-    listRule: "id = @request.auth.id",
-    viewRule: "id = @request.auth.id",
-    createRule: null,
-    updateRule: "id = @request.auth.id",
-    deleteRule: null,
-    passwordAuth: {
-      enabled: true,
-      identityFields: ["email"],
-    },
-  });
+    maxSelect: 1,
+    values: ["parent", "doctor", "scoring-worker"],
+    hidden: false,
+    help: "",
+  }));
+  users.fields.add(new Field({
+    ...textField("parentName", "text100000026"),
+    required: false,
+  }));
+  users.listRule = "id = @request.auth.id";
+  users.viewRule = "id = @request.auth.id";
+  users.createRule = "@request.body.role = 'parent'";
+  users.updateRule = "id = @request.auth.id";
+  users.deleteRule = null;
   app.save(users);
 
   const children = baseCollection("children", "pbc_1000000002", [
     textField("displayName", "text100000002", true),
-    relationField("parent", "relation100000003", "pbc_1000000001", true),
+    {
+      type: "date",
+      id: "date100000027",
+      name: "dateOfBirth",
+      required: true,
+      presentable: false,
+      system: false,
+      min: "",
+      max: "",
+      hidden: false,
+      help: "",
+    },
+    {
+      type: "select",
+      id: "select100000028",
+      name: "gender",
+      required: true,
+      presentable: false,
+      system: false,
+      maxSelect: 1,
+      values: ["female", "male", "non-binary", "prefer-not-to-say"],
+      hidden: false,
+      help: "",
+    },
+    boolField("consent", "bool100000029"),
+    textField("consentAt", "text100000030"),
+    relationField("parent", "relation100000003", users.id, true),
     {
       type: "select",
       id: "select100000004",
@@ -127,14 +147,25 @@ migrate((app) => {
   ], {
     listRule: "@request.auth.role = 'parent' && parent = @request.auth.id",
     viewRule: "@request.auth.role = 'parent' && parent = @request.auth.id",
-    createRule: "@request.auth.role = 'parent' && @request.body.parent = @request.auth.id",
+    createRule: "@request.auth.role = 'parent' && @request.body.parent = @request.auth.id && @request.body.consent = true",
     updateRule: "@request.auth.role = 'parent' && parent = @request.auth.id",
   });
   app.save(children);
 
   const sessions = app.findCollectionByNameOrId("sessions");
-  sessions.fields.add(relationField("child", "relation100000011", children.id));
-  sessions.fields.add(boolField("streakCounted", "bool100000012"));
+  addField(sessions, relationField("child", "relation100000011", children.id));
+  addField(sessions, boolField("streakCounted", "bool100000012"));
+  addField(sessions, {
+    type: "json",
+    id: "json100000031",
+    name: "featureSamples",
+    required: false,
+    presentable: false,
+    system: false,
+    maxSize: 0,
+    hidden: false,
+    help: "",
+  });
   sessions.listRule = "@request.auth.role = 'scoring-worker' || (@request.auth.role = 'parent' && child.parent = @request.auth.id)";
   sessions.viewRule = "@request.auth.role = 'scoring-worker' || (@request.auth.role = 'parent' && child.parent = @request.auth.id)";
   sessions.createRule = "@request.auth.role = 'parent' && child.parent = @request.auth.id";
@@ -143,7 +174,7 @@ migrate((app) => {
   app.save(sessions);
 
   const results = app.findCollectionByNameOrId("results");
-  results.fields.add(relationField("session", "relation100000013", sessions.id));
+  addField(results, relationField("session", "relation100000013", sessions.id));
   results.listRule = "@request.auth.role = 'scoring-worker' || (@request.auth.role = 'parent' && session.child.parent = @request.auth.id)";
   results.viewRule = "@request.auth.role = 'scoring-worker' || (@request.auth.role = 'parent' && session.child.parent = @request.auth.id)";
   results.createRule = "@request.auth.role = 'scoring-worker'";
@@ -229,6 +260,7 @@ migrate((app) => {
   const sessions = app.findCollectionByNameOrId("sessions");
   sessions.fields.removeById("relation100000011");
   sessions.fields.removeById("bool100000012");
+  sessions.fields.removeById("json100000031");
   sessions.listRule = "";
   sessions.viewRule = "";
   sessions.createRule = "";
@@ -246,6 +278,17 @@ migrate((app) => {
   app.save(results);
 
   for (const name of ["videos", "doctor_directory", "conclusions", "children", "users"]) {
+    if (name === "users") {
+      const users = app.findCollectionByNameOrId("users");
+      users.fields.removeById("select100000001");
+      users.fields.removeById("text100000026");
+      users.listRule = null;
+      users.viewRule = null;
+      users.createRule = null;
+      users.updateRule = null;
+      app.save(users);
+      continue;
+    }
     const collection = app.findCollectionByNameOrId(name);
     app.delete(collection);
   }

@@ -1,4 +1,13 @@
 onRecordCreateRequest((event) => {
+  if (!event.hasSuperuserAuth()) event.record.set("role", "parent");
+  event.next();
+}, "users");
+
+onRecordCreateRequest((event) => {
+  if (!event.record.getBool("consent")) {
+    throw new BadRequestError("Guardian consent is required to create a child profile.");
+  }
+  event.record.set("consentAt", new Date().toISOString());
   event.record.set("riskFlag", "pending");
   event.record.set("sessionCount", 0);
   event.record.set("streakComplete", false);
@@ -35,7 +44,7 @@ onRecordCreateRequest((event) => {
   child.set("sessionsToday", sessionsToday + 1);
   event.app.save(child);
 
-  event.record.set("status", "uploaded");
+  event.record.set("status", "in_progress");
   event.record.set("streakCounted", false);
   try {
     event.next();
@@ -50,10 +59,16 @@ onRecordCreateRequest((event) => {
 
 onRecordUpdateRequest((event) => {
   const original = event.record.original();
+  if (!["in_progress", "uploaded"].includes(original.getString("status"))) {
+    throw new BadRequestError("Only a reserved session can be completed.");
+  }
   event.record.set("child", original.getString("child"));
   event.record.set("childId", original.getString("childId"));
   event.record.set("sessionId", original.getString("sessionId"));
-  event.record.set("status", original.getString("status"));
+  if (event.record.getString("status") !== "uploaded") {
+    throw new BadRequestError("Session uploads must move to uploaded status.");
+  }
+  event.record.set("status", "uploaded");
   event.record.set("streakCounted", original.getBool("streakCounted"));
   event.next();
 }, "sessions");

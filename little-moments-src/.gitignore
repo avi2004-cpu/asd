@@ -15,6 +15,9 @@ dist-ssr
 .tanstack/**
 .nitro
 *.local
+public/mediapipe/wasm/
+public/models/face_landmarker.task
+public/models/emotion/
 
 # Wrangler / Cloudflare
 .wrangler/

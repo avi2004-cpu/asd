@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   getDoctorChildDetails,
-  isDoctorAuthenticated,
+  restoreDoctorSession,
   signOut,
   type DoctorChildDetails,
 } from "@/lib/pocketbase";
@@ -31,13 +31,17 @@ function DoctorChildDetail() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!isDoctorAuthenticated()) {
-      void navigate({ to: "/doctor/login" });
-      return;
-    }
     let active = true;
-    void getDoctorChildDetails(id)
+    void restoreDoctorSession()
+      .then(async (authenticated) => {
+        if (!authenticated) {
+          await navigate({ to: "/doctor/login" });
+          return null;
+        }
+        return getDoctorChildDetails(id);
+      })
       .then((response) => {
+        if (!response) return;
         if (active) setDetails(response);
       })
       .catch((reason: unknown) => {
@@ -154,6 +158,15 @@ function DoctorChildDetail() {
               {conclusions[0] ? (
                 <>
                   <p className="insight-copy">{conclusions[0].summary}</p>
+                  {conclusions[0].trend && (
+                    <p className="muted-line">
+                      {conclusions[0].trend.level} overall · {conclusions[0].trend.direction} trend
+                      · {conclusions[0].trend.sessionsAnalyzed} usable of{" "}
+                      {conclusions[0].trend.sessionsTotal} sessions
+                      {conclusions[0].trend.meanRisk !== null &&
+                        ` · ${Math.round(conclusions[0].trend.meanRisk * 100)}% mean score`}
+                    </p>
+                  )}
                   <p className="muted-line">
                     Recorded {new Date(conclusions[0].createdAt).toLocaleString()}
                   </p>
@@ -236,6 +249,16 @@ function DoctorChildDetail() {
                           <span className="empty-visual">No gaze heatmap available.</span>
                         )}
                       </div>
+                      {session?.thumbnailUrl && (
+                        <div className="session-thumbnail">
+                          <h4>Small grayscale camera sample</h4>
+                          <img
+                            src={session.thumbnailUrl}
+                            alt={`Grayscale session sample for ${session.sessionId}`}
+                            loading="lazy"
+                          />
+                        </div>
+                      )}
                     </article>
                   );
                 })}
