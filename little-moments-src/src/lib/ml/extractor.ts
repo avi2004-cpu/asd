@@ -1,11 +1,7 @@
 import type { FaceLandmarker } from "@mediapipe/tasks-vision";
 import type * as TF from "@tensorflow/tfjs";
 import { gazeFromLandmarks } from "./gaze";
-import {
-  compositeFromBlendshapes,
-  compositeFromEmotions,
-  probsFromVector,
-} from "./expression";
+import { compositeFromBlendshapes, compositeFromEmotions, probsFromVector } from "./expression";
 import { toDrawable } from "./source";
 import type { FrameFeatures, FrameSource } from "./types";
 

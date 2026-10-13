@@ -31,10 +31,9 @@ try {
   if (!response.ok) {
     throw new Error(`Face Landmarker download failed (${response.status}).`);
   }
-  await (await import("node:fs/promises")).writeFile(
-    temporaryModel,
-    new Uint8Array(await response.arrayBuffer()),
-  );
+  await (
+    await import("node:fs/promises")
+  ).writeFile(temporaryModel, new Uint8Array(await response.arrayBuffer()));
   await rm(modelTarget, { force: true });
   await rename(temporaryModel, modelTarget);
 } catch (error) {

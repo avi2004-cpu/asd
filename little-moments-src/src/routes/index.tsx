@@ -7,9 +7,15 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Little Moments — Early Screening Prototype" },
-      { name: "description", content: "A gentle early-screening prototype for families and clinicians." },
+      {
+        name: "description",
+        content: "A gentle early-screening prototype for families and clinicians.",
+      },
       { property: "og:title", content: "Little Moments — Early Screening Prototype" },
-      { property: "og:description", content: "A gentle early-screening prototype for families and clinicians." },
+      {
+        property: "og:description",
+        content: "A gentle early-screening prototype for families and clinicians.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

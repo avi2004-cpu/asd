@@ -13,7 +13,8 @@ export function buildTrendPoints(input: Record<string, unknown>): TrendPoint[] {
     }
     if (Array.isArray(raw)) {
       raw.forEach((entry, index) => {
-        if (typeof entry === "number") points.push({ time: `${key} ${index + 1}`, score: entry, timestamp: `${key}-${index}` });
+        if (typeof entry === "number")
+          points.push({ time: `${key} ${index + 1}`, score: entry, timestamp: `${key}-${index}` });
         else if (entry && typeof entry === "object") {
           const item = entry as Record<string, unknown>;
           const score = Number(item["score"] ?? item["value"]);

@@ -165,7 +165,7 @@ function ChildApp() {
     setUploadError("");
     try {
       const collectedFeatures = await featureCollector.current?.finish();
-      const completedFeatures = collectedFeatures ?? await new SessionFeatureCollector().finish();
+      const completedFeatures = collectedFeatures ?? (await new SessionFeatureCollector().finish());
       await uploadSession(
         sessionRecordIdRef.current,
         {

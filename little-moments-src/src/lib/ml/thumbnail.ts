@@ -1,10 +1,7 @@
 import type { FrameSource } from "./types";
 import { toDrawable } from "./source";
 
-export async function captureGrayThumbnail(
-  source: FrameSource,
-  width = 96,
-): Promise<Blob | null> {
+export async function captureGrayThumbnail(source: FrameSource, width = 96): Promise<Blob | null> {
   const drawable = await toDrawable(source);
   if (!drawable) return null;
   try {

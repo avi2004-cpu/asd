@@ -1,10 +1,6 @@
 /** Anything the browser can read pixels from, including a camera-plugin data URL. */
 export type FrameSource =
-  | HTMLVideoElement
-  | HTMLImageElement
-  | HTMLCanvasElement
-  | ImageBitmap
-  | string;
+  HTMLVideoElement | HTMLImageElement | HTMLCanvasElement | ImageBitmap | string;
 
 export interface FrameFeatures {
   gazeX: number;

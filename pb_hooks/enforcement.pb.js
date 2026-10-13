@@ -27,10 +27,26 @@ onRecordCreateRequest((event) => {
   event.record.set("childId", child.id);
   const today = new Date().toISOString().slice(0, 10);
   const lastSessionDate = child.getString("lastSessionDate");
-  const sessionsToday = lastSessionDate === today ? child.getInt("sessionsToday") : 0;
+  // A reservation that never reached upload is superseded by the next one, so
+  // an abandoned session does not hold a daily slot.
+  const abandoned = event.app.findRecordsByFilter(
+    "sessions",
+    "child = {:childId} && status = 'in_progress'",
+    "",
+    50,
+    0,
+    { childId },
+  );
+  const sessionsToday = lastSessionDate === today
+    ? Math.max(0, child.getInt("sessionsToday") - abandoned.length)
+    : 0;
 
   if (sessionsToday >= dailySessionLimit) {
     throw new BadRequestError("This child has reached the daily session limit of 2.");
+  }
+  for (const stale of abandoned) {
+    stale.set("status", "abandoned");
+    event.app.save(stale);
   }
 
   const originalSessionsToday = child.getInt("sessionsToday");
@@ -53,6 +69,10 @@ onRecordCreateRequest((event) => {
     child.set("streakComplete", originalStreakComplete);
     child.set("lastSessionDate", originalLastSessionDate);
     event.app.save(child);
+    for (const stale of abandoned) {
+      stale.set("status", "in_progress");
+      event.app.save(stale);
+    }
     throw error;
   }
 }, "sessions");

@@ -1,7 +1,7 @@
 import type { FrameSource } from "./types";
 
 export interface Drawable {
-  image: CanvasImageSource;
+  image: Exclude<FrameSource, string>;
   width: number;
   height: number;
   dispose: () => void;

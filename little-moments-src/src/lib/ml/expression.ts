@@ -27,8 +27,7 @@ const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
 export function compositeFromEmotions(emotions: EmotionProbs): number {
   const positive = emotions.happy + emotions.surprise;
-  const negative =
-    emotions.angry + emotions.sad + emotions.fear + emotions.disgust;
+  const negative = emotions.angry + emotions.sad + emotions.fear + emotions.disgust;
   return clamp01(0.5 + 0.5 * (positive - negative));
 }
 

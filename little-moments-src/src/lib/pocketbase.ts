@@ -15,7 +15,7 @@ export interface ScreeningSession {
   gameModule: string;
   framesUploaded?: string[];
   interactionEvents: InteractionEvent[];
-  status: "in_progress" | "uploaded" | "completed";
+  status: "in_progress" | "uploaded" | "completed" | "abandoned";
   features?: SessionFeatures;
   thumbnail?: string;
   thumbnailUrl?: string;
@@ -286,9 +286,11 @@ export async function getDoctorChildDetails(childId: string) {
     ...details,
     sessions: details.sessions.map((session) => ({
       ...session,
-      thumbnailUrl: session.thumbnail
-        ? `${pocketBaseUrl}/api/files/sessions/${session.id}/${encodeURIComponent(session.thumbnail)}`
-        : undefined,
+      ...(session.thumbnail
+        ? {
+            thumbnailUrl: `${pocketBaseUrl}/api/files/sessions/${session.id}/${encodeURIComponent(session.thumbnail)}`,
+          }
+        : {}),
     })),
   };
 }
@@ -409,7 +411,7 @@ export async function uploadSession(
   return {
     ...session,
     features,
-    thumbnail: typeof saved.thumbnail === "string" ? saved.thumbnail : undefined,
+    thumbnail: typeof saved["thumbnail"] === "string" ? saved["thumbnail"] : undefined,
     status: "uploaded" as const,
     ...saved,
   };

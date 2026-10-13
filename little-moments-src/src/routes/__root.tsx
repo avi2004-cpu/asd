@@ -78,10 +78,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Little Moments — Early Screening Prototype" },
-      { name: "description", content: "A gentle early-screening prototype for families and clinicians." },
+      {
+        name: "description",
+        content: "A gentle early-screening prototype for families and clinicians.",
+      },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "Little Moments — Early Screening Prototype" },
-      { property: "og:description", content: "A gentle early-screening prototype for families and clinicians." },
+      {
+        property: "og:description",
+        content: "A gentle early-screening prototype for families and clinicians.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
