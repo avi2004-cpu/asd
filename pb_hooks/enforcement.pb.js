@@ -12,6 +12,7 @@ onRecordCreateRequest((event) => {
   event.record.set("sessionCount", 0);
   event.record.set("streakComplete", false);
   event.record.set("sessionsToday", 0);
+  event.record.set("reservationsToday", 0);
   event.record.set("lastSessionDate", "");
   event.record.set("lastCompletedDate", "");
   event.record.set("streakDays", 0);
@@ -20,6 +21,7 @@ onRecordCreateRequest((event) => {
 
 onRecordCreateRequest((event) => {
   const dailySessionLimit = 2;
+  const dailyReservationLimit = 6;
   const childId = event.record.getString("child");
   if (!childId) throw new BadRequestError("A child record is required.");
 
@@ -41,14 +43,24 @@ onRecordCreateRequest((event) => {
     ? Math.max(0, child.getInt("sessionsToday") - abandoned.length)
     : 0;
 
+  // Starts are capped separately so unfinished sessions cannot be replayed
+  // without end.
+  const reservationsToday = lastSessionDate === today ? child.getInt("reservationsToday") : 0;
+
   if (sessionsToday >= dailySessionLimit) {
     throw new BadRequestError("This child has reached the daily session limit of 2.");
+  }
+  if (reservationsToday >= dailyReservationLimit) {
+    throw new BadRequestError(
+      "This child has reached the daily session limit: too many unfinished sessions today.",
+    );
   }
   for (const stale of abandoned) {
     stale.set("status", "abandoned");
     event.app.save(stale);
   }
 
+  const originalReservationsToday = child.getInt("reservationsToday");
   const originalSessionsToday = child.getInt("sessionsToday");
   const originalStreakComplete = child.getBool("streakComplete");
   const originalLastSessionDate = lastSessionDate;
@@ -58,6 +70,7 @@ onRecordCreateRequest((event) => {
   }
   child.set("lastSessionDate", today);
   child.set("sessionsToday", sessionsToday + 1);
+  child.set("reservationsToday", reservationsToday + 1);
   event.app.save(child);
 
   event.record.set("status", "in_progress");
@@ -66,6 +79,7 @@ onRecordCreateRequest((event) => {
     event.next();
   } catch (error) {
     child.set("sessionsToday", originalSessionsToday);
+    child.set("reservationsToday", originalReservationsToday);
     child.set("streakComplete", originalStreakComplete);
     child.set("lastSessionDate", originalLastSessionDate);
     event.app.save(child);
@@ -102,6 +116,7 @@ onRecordUpdateRequest((event) => {
       "sessionCount",
       "streakComplete",
       "sessionsToday",
+      "reservationsToday",
       "lastSessionDate",
       "lastCompletedDate",
       "streakDays",
