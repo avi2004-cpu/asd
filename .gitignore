@@ -1,0 +1,23 @@
+# PocketBase binary + local data
+pocketbase
+pocketbase.exe
+pb_data/
+CHANGELOG.md
+LICENSE.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node / frontend
+node_modules/
+dist/
+.env.local
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
