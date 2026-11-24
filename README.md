@@ -53,7 +53,7 @@ Day 1 branches merge into `dev` for the end-to-end dry run.
 | Part | How |
 |------|-----|
 | Backend + ML | See [`BACKEND.md`](BACKEND.md) on `feat/backend-ml` (PocketBase + `ml/worker.py`) |
-| Frontend | `npm install`, then `npm run dev` (once the Vite app is added) |
+| Frontend | See [`FRONTEND.md`](FRONTEND.md): `npm install`, then `npm run dev` |
 | Android | `npm run build`, then `npx cap sync android`, then build the debug APK in Android Studio |
 
 ## Pre-demo checklist
