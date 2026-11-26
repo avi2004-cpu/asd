@@ -1,6 +1,6 @@
 # Early ASD Screening Prototype
 
-**Early Detection of Autism in Toddlers Using Computer Vision.** This is a 2-day MVP built by a 3-person team.
+**Early Detection of Autism in Toddlers Using Computer Vision.** This is a MVP built by a 3-person team.
 
 It is an Android app (React + Vite + Capacitor) where a parent runs short play sessions with their toddler.
 On-device MediaPipe face tracking turns each session into 7 numbers (gaze and expression features).
